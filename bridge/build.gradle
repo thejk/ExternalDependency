@@ -1,0 +1,44 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion '29.0.3'
+
+    defaultConfig {
+        minSdkVersion 19
+        targetSdkVersion 29
+    }
+}
+
+dependencies {
+    implementation files('../external/external.jar')
+}
+
+task buildExternal {
+    // Always run task
+    outputs.upToDateWhen { false }
+
+    // This is obviously a lot more complicated in real life, but this simulates an external build
+    doLast {
+        def baseDir = file('../external')
+        new File(baseDir, 'build').mkdirs()
+        project.exec {
+            args '-d', 'build', 'External.java'
+            executable 'javac'
+            workingDir baseDir
+        }
+        project.exec {
+            args 'cf', 'external.jar', '-C', 'build', 'org/the_jk/externaldependency/External.class'
+            executable 'jar'
+            workingDir baseDir
+        }
+    }
+}
+
+tasks.all { task ->
+    def match = task.name =~ /^javaPreCompile(Debug|Release)$/
+    if (match) {
+        task.dependsOn 'buildExternal'
+    }
+}
+
